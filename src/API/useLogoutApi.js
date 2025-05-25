@@ -11,6 +11,7 @@ export const useLogoutApi = () => {
     "verified",
     "membershipNumber",
     "role",
+    "isUserSentDataBefore",
   ]);
 
   return useMutation({
@@ -24,6 +25,7 @@ export const useLogoutApi = () => {
       removeCookie("token");
       removeCookie("membershipNumber");
       removeCookie("role");
+      removeCookie("isUserSentDataBefore");
     },
 
     onError: (err) => {
@@ -32,6 +34,7 @@ export const useLogoutApi = () => {
       removeCookie("token");
       removeCookie("membershipNumber");
       removeCookie("role");
+      removeCookie("isUserSentDataBefore");
     },
   });
 };

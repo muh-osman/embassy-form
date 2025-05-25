@@ -17,6 +17,7 @@ export const useLoginApi = () => {
     "verified",
     "membershipNumber",
     "role",
+    "isUserSentDataBefore",
   ]);
 
   return useMutation({
@@ -30,6 +31,7 @@ export const useLoginApi = () => {
       setCookie("role", responseData.user.role);
       setCookie("membershipNumber", responseData.user.membership_number);
       setCookie("token", responseData.token);
+      setCookie("isUserSentDataBefore", responseData.has_arabic_name);
       navigate("/dashboard", { replace: true });
     },
 

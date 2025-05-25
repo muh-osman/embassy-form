@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\VerifyEmail;
 use App\Mail\ResetPasswordMail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Models\FamilyMember;
 
 
 class UserController extends Controller
@@ -101,6 +103,7 @@ class UserController extends Controller
                     'user' => $user,
                     'message' => 'Login successful.',
                     'token' => $token,
+                    'has_arabic_name' => !empty($user->name_arabic),
                 ]);
             }
 
@@ -243,77 +246,131 @@ class UserController extends Controller
     }
 
     /**
-     * Update user profile information
+     * Update user profile information including family members
      */
     public function updateUser(Request $request)
     {
+        DB::beginTransaction();
+
         try {
             $user = Auth::user();
 
+            // Validate user data
             $validatedData = $request->validate([
                 // Personal Information
                 'name_arabic' => 'nullable|string|max:255',
                 'name_english' => 'nullable|string|max:255',
-                'gender' => 'nullable|string|in:male,female,other',
+                'gender' => 'nullable|string|max:255',
+
                 // Address Information
                 'area' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:255',
                 'neighborhood' => 'nullable|string|max:255',
+
                 // Professional Information
                 'profession' => 'nullable|string|max:255',
                 'currently_working' => 'nullable|boolean',
+
                 // Family Information
                 'status' => 'nullable|string|max:255',
                 'family_living_with_you' => 'nullable|boolean',
                 'number_of_family_members' => 'nullable|integer|min:0|max:100',
+
                 // Contact Information
                 'mobile_number' => 'nullable|string|max:20',
                 'alternative_mobile_number' => 'nullable|string|max:20',
+
                 // Additional Information
                 'note' => 'nullable|string|max:1000',
             ]);
 
-            // Update the user profile
+            // Update user profile
             $user->update($validatedData);
+
+            // Process family members if provided
+            if ($request->has('family_members')) {
+                $familyMembers = $request->family_members;
+
+                // First delete existing family members
+                $user->familyMembers()->delete();
+
+                // Then create new records
+                foreach ($familyMembers as $member) {
+                    $user->familyMembers()->create([
+                        'name_arabic' => $member['name_arabic'] ?? null,
+                        'name_english' => $member['name_english'] ?? null,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Get updated user with family members
+            $updatedUser = User::with('familyMembers')->find($user->id);
 
             return response()->json([
                 'message' => 'Profile updated successfully',
                 'user' => [
-                    'id' => $user->id,
-                    'membership_number' => $user->membership_number,
-                    'email' => $user->email,
+                    'id' => $updatedUser->id,
+                    'membership_number' => $updatedUser->membership_number,
+                    'email' => $updatedUser->email,
                     // Personal Information
-                    'name_arabic' => $user->name_arabic,
-                    'name_english' => $user->name_english,
-                    'gender' => $user->gender,
+                    'name_arabic' => $updatedUser->name_arabic,
+                    'name_english' => $updatedUser->name_english,
+                    'gender' => $updatedUser->gender,
                     // Address Information
-                    'area' => $user->area,
-                    'city' => $user->city,
-                    'neighborhood' => $user->neighborhood,
+                    'area' => $updatedUser->area,
+                    'city' => $updatedUser->city,
+                    'neighborhood' => $updatedUser->neighborhood,
                     // Professional Information
-                    'profession' => $user->profession,
-                    'currently_working' => $user->currently_working,
+                    'profession' => $updatedUser->profession,
+                    'currently_working' => $updatedUser->currently_working,
                     // Family Information
-                    'status' => $user->status,
-                    'family_living_with_you' => $user->family_living_with_you,
-                    'number_of_family_members' => $user->number_of_family_members,
+                    'status' => $updatedUser->status,
+                    'family_living_with_you' => $updatedUser->family_living_with_you,
+                    'number_of_family_members' => $updatedUser->number_of_family_members,
+                    'family_members' => $updatedUser->familyMembers,
                     // Contact Information
-                    'mobile_number' => $user->mobile_number,
-                    'alternative_mobile_number' => $user->alternative_mobile_number,
+                    'mobile_number' => $updatedUser->mobile_number,
+                    'alternative_mobile_number' => $updatedUser->alternative_mobile_number,
                     // Additional Information
-                    'note' => $user->note,
-                    // Timestamps
-                    'updated_at' => $user->updated_at,
+                    'note' => $updatedUser->note,
                 ]
             ]);
         } catch (ValidationException $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'Validation error',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'Profile update failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Check if authenticated user has name_arabic set
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function hasArabicName()
+    {
+        try {
+            $user = Auth::user();
+
+            return response()->json([
+                'has_arabic_name' => !empty($user->name_arabic),
+                'name_arabic' => $user->name_arabic,
+                'message' => $user->name_arabic
+                    ? 'User has Arabic name set'
+                    : 'No Arabic name set for user'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error checking Arabic name: ' . $e->getMessage()
             ], 500);
         }
     }

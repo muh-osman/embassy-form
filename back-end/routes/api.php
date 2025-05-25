@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //
     Route::post('/post-user-data', [UserController::class, 'updateUser']);
+    Route::get('/is-send-data-before', [UserController::class, 'hasArabicName']);
 
     // Logout Route (http://localhost:8000/api/logout)
     Route::post('/logout', [UserController::class, 'logout']);

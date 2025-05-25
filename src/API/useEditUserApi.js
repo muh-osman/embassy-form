@@ -1,28 +1,28 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 // API base
 import API from "./Api";
 // Toastify
 import { toast } from "react-toastify";
-// Api
-import { fetchPosts } from "./useShowPostsApi";
+// Cookies
+import { useCookies } from "react-cookie";
 
 export const useEditUserApi = () => {
-  const qc = useQueryClient();
-
+  const [cookies, setCookie] = useCookies([
+    "token",
+    "verified",
+    "membershipNumber",
+    "role",
+    "isUserSentDataBefore",
+  ]);
   return useMutation({
-    mutationFn: async ({ selectedPostId, formData }) => {
-      const res = await API.post(
-        `api/posts/${selectedPostId}?_method=PATCH`,
-        formData
-      );
+    mutationFn: async (formData) => {
+      const res = await API.post(`api/post-user-data`, formData);
       return res.data;
     },
 
     onSuccess: () => {
-      qc.prefetchQuery({
-        queryKey: ["posts"],
-        queryFn: () => fetchPosts(),
-      });
+      toast.success("تم الارسال");
+      setCookie("isUserSentDataBefore", true);
     },
 
     onError: (err) => {
