@@ -1,0 +1,28 @@
+*,
+::before,
+::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Cairo", sans-serif !important;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "slnt" 0;
+}
+
+/* inputs label RTL*/
+.custom-label-rtl {
+  left: inherit !important;
+  right: 1.75rem !important;
+  transform-origin: right !important;
+}
+
+.custom-label-rtl + .MuiOutlinedInput-root fieldset {
+  text-align: right;
+}
